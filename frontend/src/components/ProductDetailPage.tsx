@@ -39,14 +39,14 @@ function ProductDetailPage() {
 
   if(loading) return <>Loading...</>
   else return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen bg-gray-100 p-4 ">
       <header className="mb-6">
         <Link to="/products">
           <ArrowLeftIcon className="h-6 w-6 text-gray-600" />
         </Link>
       </header>
-      <main>
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <main className=' w-full flex justify-center '>
+        <div className="max-w-[870px] bg-white rounded-lg shadow-md overflow-hidden">
           <motion.img
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

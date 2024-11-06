@@ -1,26 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
+import axios from 'axios';
 
-// Mock cart data (in a real app, you'd manage this with state management like Redux or Zustand)
-const initialCartItems = [
-  { id: 1, name: 'Product 1', price: 19.99, quantity: 2, image: '/placeholder.svg' },
-  { id: 2, name: 'Product 2', price: 29.99, quantity: 1, image: '/placeholder.svg' },
-];
+interface CartItem {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+}
 
 function CartPage() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [productIds, setProductIds] = useState<number[]>([]);
   const navigate = useNavigate();
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    setCartItems(cartItems.map(item => 
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    ));
+  // Fetch cart data when the component mounts
+  useEffect(() => {
+    const fetchCartData = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/cart');
+        setProductIds(response.data); // Set the product IDs from the cart response
+
+        if (!response.data) return; // Exit if no product IDs are found
+
+        const fetchedItems: CartItem[] = []; // Store the fetched items temporarily
+
+        // Use for...of to handle async inside the loop
+        for (const productId of response.data) {
+          const productResponse = await fetch(`http://localhost:5000/products/${productId}`);
+          if (productResponse.ok) {
+            const product: CartItem = await productResponse.json();
+            fetchedItems.push(product); // Add the fetched product to the array
+          }
+        }
+
+        // After all products are fetched, update the state
+        setCartItems(fetchedItems);
+      } catch (error) {
+        console.error('Failed to fetch cart data:', error);
+      }
+    };
+
+    fetchCartData();
+  }, []); // Empty dependency array to run only on mount
+
+  const updateQuantity = async (id: number, newQuantity: number) => {
+    try {
+      // Send request to update the quantity of the CartItem
+      const response = await axios.put('http://localhost:5000/cart/update', { id, quantity: newQuantity });
+      // Update the local state after the successful update
+      setCartItems(cartItems.map(item => 
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      ));
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+    }
   };
 
-  const removeItem = (id: number) => {
-    setCartItems(cartItems.filter(item => item.id !== id));
+  const removeItem = async (id: number) => {
+    try {
+      // Send request to remove the CartItem
+      await axios.delete('http://localhost:5000/api/cart/remove', { data: { id } });
+      // Remove the item from the local state after the successful removal
+      setCartItems(cartItems.filter(item => item.id !== id));
+    } catch (error) {
+      console.error('Failed to remove item from cart:', error);
+    }
   };
 
   const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -50,10 +99,10 @@ function CartPage() {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
                 className="bg-white rounded-lg shadow-md p-4 mb-4 flex items-center"
               >
-                <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded mr-4" />
+                <img src={item.image} alt={`Product ${item.title}`} className="w-20 h-20 object-cover rounded mr-4" />
                 <div className="flex-grow">
-                  <h2 className="text-lg font-semibold">{item.name}</h2>
-                  <p className="text-gray-600">${item.price.toFixed(2)}</p>
+                  <h2 className="text-lg font-semibold">{item.title}</h2> {/* Use title instead of productId */}
+                  <p className="text-gray-600">${item.price}</p>
                   <div className="flex items-center mt-2">
                     <button
                       onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}

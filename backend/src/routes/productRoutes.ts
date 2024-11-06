@@ -12,6 +12,8 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
+
+
 router.get("/:id", async (req: any, res: any) => {
   const id = parseInt(req.params.id, 10);
   try {
@@ -62,6 +64,27 @@ router.get('/filter/category/:category', async (req, res) => {
     res.status(201).json(filter);
   } catch (error) {
     res.status(500).json({ error: "Failed to create product" });
+  }
+});
+
+router.post('/products/search', async (req: any, res: any) => {
+  const { title } = req.body
+
+  if (typeof title !== 'string') {
+    return res.status(400).json({ message: 'Invalid search query' });
+  }
+
+  try {
+    const products = await prisma.$queryRaw`
+    SELECT * FROM "Product"
+    WHERE "title" ILIKE ${'%' + title + '%'}
+    ORDER BY "title" ASC
+    LIMIT 10;
+  `;
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error in fuzzy searching products:", error);
+    res.status(500).json({ message: 'Failed to perform fuzzy search' });
   }
 });
 
